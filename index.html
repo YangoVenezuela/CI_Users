@@ -1,0 +1,1499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yango - Competitive Intelligence</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  @font-face { font-family: 'YangoHeadline'; src: url('Yango Headline.otf') format('opentype'); font-weight: 700; }
+  @font-face { font-family: 'YangoText'; src: url('YangoText_Rg.ttf') format('truetype'); font-weight: 400; }
+  @font-face { font-family: 'YangoText'; src: url('YangoText_XBd.ttf') format('truetype'); font-weight: 700; }
+
+  :root {
+    --yango: #E02020;
+    --ridery: #00BFA5;
+    --yummy: #7B2FBE;
+    --bg: #f2f2f2;
+    --surface: #ffffff;
+    --border: #e0e0e0;
+    --text: #1a1a1a;
+    --text2: #555;
+    --text3: #999;
+    --neg: #1a7d3a;
+    --pos: #c0392b;
+    --header-bg: #2a2a2a;
+    --filter-bg: #3d3d3d;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'YangoText', 'Segoe UI', Arial, sans-serif; background: var(--bg); color: var(--text); font-size: 13px; }
+
+  .header { background: var(--header-bg); color: #fff; padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+  .header-left { display: flex; align-items: center; gap: 14px; }
+  .header-logo { height: 32px; display: flex; align-items: center; }
+  .header-logo img { height: 28px; display: block; }
+  .header-divider { width: 1px; height: 28px; background: rgba(255,255,255,0.2); }
+  .header-title { font-family: 'YangoHeadline', sans-serif; font-size: 17px; font-weight: 700; color: #fff; letter-spacing: 0.01em; }
+  .header-sub { font-size: 11px; opacity: 0.6; margin-top: 2px; }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .refresh-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.25); color: #fff; padding: 6px 14px; border-radius: 4px; cursor: pointer; font-size: 12px; font-family: 'YangoText', sans-serif; }
+  .refresh-btn:hover { background: rgba(255,255,255,0.2); }
+  .status { font-size: 11px; color: rgba(255,255,255,0.5); }
+
+  .tabbar { background: #1a1a1a; display: flex; gap: 2px; padding: 0 24px; }
+  .tabbar .tab-btn { background: none; border: none; color: rgba(255,255,255,0.55); padding: 11px 18px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: 'YangoText', sans-serif; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 3px solid transparent; transition: color .15s, border-color .15s; }
+  .tabbar .tab-btn:hover { color: #fff; }
+  .tabbar .tab-btn.active { color: #fff; border-bottom-color: var(--yango); }
+
+  .filters-bar { background: var(--filter-bg); padding: 10px 24px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .filter-group { display: flex; align-items: center; gap: 5px; }
+  .filter-group label { font-size: 11px; color: rgba(255,255,255,0.7); white-space: nowrap; }
+  .filters-bar select, .filters-bar input[type=date] { font-size: 12px; padding: 4px 7px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: #fff; cursor: pointer; font-family: 'YangoText', sans-serif; }
+  .filters-bar select option { background: #3d3d3d; color: #fff; }
+  .filter-divider { width: 1px; height: 22px; background: rgba(255,255,255,0.15); margin: 0 6px; }
+  .filter-tag { font-size: 10px; background: rgba(224,32,32,0.25); color: rgba(255,180,180,1); border: 1px solid rgba(224,32,32,0.4); border-radius: 3px; padding: 2px 6px; white-space: nowrap; }
+
+  .content { padding: 16px 24px; }
+  .section-header { margin-bottom: 12px; }
+  .section-title { font-family: 'YangoHeadline', sans-serif; font-size: 14px; font-weight: 700; color: var(--text); letter-spacing: 0.02em; text-transform: uppercase; }
+  .section-desc { font-size: 11px; color: var(--text3); margin-top: 3px; }
+  .section-divider { display: flex; align-items: center; gap: 12px; margin: 24px 0 16px; border-top: 2px solid var(--yango); padding-top: 14px; }
+  .section-divider-title { font-family: 'YangoHeadline', sans-serif; font-size: 14px; font-weight: 700; color: var(--yango); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+  .section-divider-line { flex: 1; height: 1px; background: var(--border); }
+  .section-divider-sub { font-size: 11px; color: var(--text3); white-space: nowrap; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 10px; font-size: 12px; color: var(--text2); }
+  .legend span { display: flex; align-items: center; gap: 6px; }
+
+  .charts-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 14px; }
+  .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: 5px; padding: 12px; }
+  .chart-card .ct { font-family: 'YangoText', sans-serif; font-size: 10px; font-weight: 700; color: var(--text2); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+  .tables-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+  .tbl-card { background: var(--surface); border: 1px solid var(--border); border-radius: 5px; padding: 12px; overflow-x: auto; }
+  .tbl-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .tbl-title { font-family: 'YangoText', sans-serif; font-size: 11px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  thead tr { background: #f5f5f5; }
+  th { font-weight: 700; color: var(--text2); text-align: right; padding: 6px 8px; border-bottom: 2px solid var(--border); white-space: nowrap; font-size: 10px; text-transform: uppercase; letter-spacing: 0.03em; }
+  th:first-child { text-align: left; }
+  td { text-align: right; padding: 5px 8px; color: var(--text); border-bottom: 1px solid #f0f0f0; white-space: nowrap; }
+  td:first-child { text-align: left; color: var(--text2); font-weight: 500; }
+  tbody tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafafa; }
+
+  tfoot tr.avg-row td { background: #f0f4ff; font-weight: 700; color: #1a1a1a !important; border-top: 2px solid #c5cde0; font-size: 11px; }
+  tfoot tr.avg-row td:first-child { color: #444 !important; }
+  tfoot tr.avg-row:hover td { background: #e8eeff; }
+
+  /* EXPORT BUTTON */
+  .export-btn { font-size: 10px; padding: 3px 10px; border-radius: 3px; border: 1px solid #ddd; background: #fff; cursor: pointer; color: #555; font-family: 'YangoText', sans-serif; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; flex-shrink: 0; }
+  .export-btn:hover { background: #f0f4ff; border-color: #99aee0; color: #333; }
+
+  /* WEEK NAVIGATION BAR */
+  .tbl-nav { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding: 6px 10px; background: #fff; border: 1px solid var(--border); border-radius: 5px; }
+  .nav-btn { font-size: 11px; padding: 4px 12px; border-radius: 3px; border: 1px solid #ddd; background: #f9f9f9; cursor: pointer; color: #333; font-family: 'YangoText', sans-serif; white-space: nowrap; }
+  .nav-btn:hover:not(:disabled) { background: #f0f4ff; border-color: #99aee0; }
+  .nav-btn:disabled { opacity: 0.35; cursor: default; }
+  .nav-label { font-size: 11px; color: #888; flex: 1; text-align: center; }
+  .nav-count { font-size: 10px; color: #bbb; }
+
+  /* WEEKLY CARD */
+  .weekly-card { background: #fff; border: 0.5px solid #e0e0e0; border-radius: 10px; padding: 16px; position: relative; overflow: hidden; margin-bottom: 20px; }
+  .weekly-card-accent { position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--yango); }
+  .weekly-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 4px; margin-bottom: 12px; }
+  .weekly-card-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #888; margin-bottom: 4px; }
+  .weekly-card-sub { font-size: 11px; color: #aaa; }
+
+  .neg { color: var(--neg); font-weight: 700; }
+  .pos { color: var(--pos); font-weight: 700; }
+  .loading { text-align: center; color: var(--text3); padding: 2rem; font-size: 13px; }
+  .error { color: var(--pos); font-size: 12px; padding: 1rem; text-align: center; background: #fff0f0; border-radius: 4px; border: 1px solid #fcc; }
+  #debug-info { font-size: 10px; color: #bbb; margin-top: 10px; line-height: 1.6; }
+
+  @media (max-width: 700px) {
+    .charts-grid { grid-template-columns: 1fr; }
+    .tables-row { grid-template-columns: 1fr; }
+    .content { padding: 12px; }
+  }
+
+  /* ===== POINTS TAB ===== */
+  .points-filter-dropdown { position: relative; min-width: 190px; }
+  .points-filter-btn { width: 100%; min-height: 30px; background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.22); font-size: 12px; padding: 5px 9px; border-radius: 3px; cursor: pointer; font-family: 'YangoText', sans-serif; display: flex; align-items: center; justify-content: space-between; gap: 10px; text-align: left; }
+  .points-filter-btn:hover, .points-filter-btn.open { background: rgba(255,255,255,0.17); border-color: rgba(255,255,255,0.38); }
+  .points-filter-panel { position: absolute; top: calc(100% + 5px); left: 0; z-index: 2000; background: #fff; border: 1px solid var(--border); border-radius: 5px; box-shadow: 0 8px 24px rgba(0,0,0,0.22); min-width: 240px; max-height: 300px; overflow-y: auto; padding: 6px; }
+  .points-filter-panel label { display: flex; align-items: center; gap: 8px; padding: 7px 8px; font-size: 12px; color: var(--text); border-radius: 3px; cursor: pointer; white-space: nowrap; }
+  .points-filter-panel label:hover { background: #f4f4f4; }
+  .points-filter-panel .points-filter-all { font-weight: 700; border-bottom: 1px solid var(--border); margin-bottom: 4px; padding-bottom: 9px; }
+  .points-filter-panel input { accent-color: var(--yango); }
+
+  .points-map-wrap { display: grid; grid-template-columns: 220px 1fr; gap: 12px; margin-bottom: 14px; }
+  #pointsMap { height: 520px; width: 100%; border-radius: 5px; border: 1px solid var(--border); background: #eee; }
+  .bracket-legend { display: flex; flex-direction: column; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 5px; padding: 12px; align-self: flex-start; }
+  .bracket-legend .bl-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text2); margin-bottom: 4px; }
+  .bracket-legend .bl-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text); }
+  .bracket-legend .bl-swatch { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+  .bracket-legend .bl-count { margin-left: auto; color: var(--text3); font-size: 11px; }
+  .geocode-status { font-size: 11px; color: var(--text3); padding: 6px 0; }
+
+  .points-list { display: flex; flex-direction: column; gap: 8px; }
+  .point-row { display: flex; align-items: flex-start; gap: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 5px; padding: 10px 12px; }
+  .point-row .pr-bracket { flex-shrink: 0; min-width: 78px; text-align: center; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; color: #fff; border-radius: 3px; padding: 4px 6px; }
+  .point-row .pr-text { font-size: 12px; color: var(--text); line-height: 1.5; flex: 1; }
+  .point-row .pr-text b { color: var(--text2); }
+  .point-row .pr-dist { flex-shrink: 0; font-size: 11px; color: var(--text3); white-space: nowrap; text-align: right; }
+  .point-row .pr-warn { color: var(--pos); font-size: 10px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="header-logo"><img src="Logo.png" alt="Yango" onerror="this.onerror=null;this.src='1781623357_photo_2026-06-16_11-10-21.jpg'"></div>
+    <div class="header-divider"></div>
+    <div>
+      <div class="header-title">Competitive Intelligence</div>
+      <div class="header-sub">Ride-Hailing Pricing · Live from Google Sheets</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="status" id="status">Loading...</div>
+    <button class="refresh-btn" onclick="loadAll()">Refresh</button>
+  </div>
+</div>
+
+<div class="tabbar" id="mainTabs">
+  <button class="tab-btn active" data-tab="main" onclick="switchTab('main')">Main Dashboard</button>
+  <button class="tab-btn" data-tab="moto" onclick="switchTab('moto')">Moto+ Evaluation</button>
+  <button class="tab-btn" data-tab="points" onclick="switchTab('points')">Points</button>
+</div>
+
+<div id="tab-main">
+
+<div class="filters-bar">
+  <div class="filter-group"><label>Category</label><select id="f-cat" onchange="render()"><option value="">All</option></select></div>
+  <div class="filter-group"><label>Peak</label><select id="f-peak" onchange="render()"><option value="">All</option></select></div>
+  <div class="filter-group"><label>From</label><input type="date" id="f-d1" onchange="render()"></div>
+  <div class="filter-group"><label>To</label><input type="date" id="f-d2" onchange="render()"></div>
+  <div class="filter-divider"></div>
+  <span class="filter-tag">Only applies to price by distance</span>
+  <div class="filter-group"><label>Distance bracket</label><select id="f-bracket" onchange="render()"><option value="">All</option></select></div>
+  <div class="filter-group"><label>Surge</label><select id="f-surge" onchange="render()"><option value="">All</option><option>Yes</option><option>No</option></select></div>
+</div>
+
+<div class="content">
+
+  <!-- WEEKLY CATEGORY CARD — always shows last 2 weeks from raw data, filter-independent -->
+  <div class="weekly-card" id="card-weekly-cats">
+    <div class="loading">Loading weekly summary...</div>
+  </div>
+
+  <!-- EXECUTIVE SUMMARY -->
+  <div style="margin-bottom:20px;">
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#888;margin-bottom:8px;">Price by distance · executive summary</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px;" id="cards-dist"></div>
+    <div style="display:flex;align-items:center;gap:10px;margin:14px 0 10px;">
+      <div style="flex:1;height:1px;background:#e0e0e0;"></div>
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#E02020;">Minimum fares · executive summary</div>
+      <div style="flex:1;height:1px;background:#e0e0e0;"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;" id="cards-min"></div>
+  </div>
+
+  <!-- SECTION 1: PRICE BY DISTANCE -->
+  <div class="section-header">
+    <div class="section-title">Price by Distance</div>
+    <div class="section-desc">Average Price W/O Discount by date, competitor and distance bracket</div>
+  </div>
+  <div class="legend" id="leg1"></div>
+  <div class="charts-grid" id="charts-grid1"><div class="loading">Loading charts...</div></div>
+
+  <!-- Week navigation for section 1 date tables -->
+  <div class="tbl-nav" id="nav1" style="display:none;"></div>
+  <div class="tables-row">
+    <div class="tbl-card">
+      <div class="tbl-card-header"><div class="tbl-title">Absolute prices by date &amp; bracket</div></div>
+      <div id="tbl-abs1"></div>
+    </div>
+    <div class="tbl-card">
+      <div class="tbl-card-header"><div class="tbl-title">Price differential % Yango vs competitors</div></div>
+      <div id="tbl-diff1"></div>
+    </div>
+  </div>
+  <div class="tables-row">
+    <div class="tbl-card">
+      <div class="tbl-card-header"><div class="tbl-title">By peak · Absolute prices</div></div>
+      <div id="tbl-peak-abs1"></div>
+    </div>
+    <div class="tbl-card">
+      <div class="tbl-card-header"><div class="tbl-title">By peak · Differential %</div></div>
+      <div id="tbl-peak-diff1"></div>
+    </div>
+  </div>
+
+  <!-- SECTION 2: MINIMUM FARES -->
+  <div class="section-divider">
+    <div class="section-divider-title">Minimum Fares</div>
+    <div class="section-divider-line"></div>
+    <div class="section-divider-sub">Source: Minimum_fares tab</div>
+  </div>
+  <div class="section-desc" style="margin-bottom:10px;">Average minimum fare by category and competitor · Filters: Category, Peak, Date range</div>
+  <div class="legend" id="leg2"></div>
+  <div class="charts-grid" id="charts-grid2"><div class="loading">Loading charts...</div></div>
+
+  <!-- Week navigation for section 2 date tables -->
+  <div class="tbl-nav" id="nav2" style="display:none;"></div>
+  <div class="tables-row">
+    <div class="tbl-card">
+      <div class="tbl-card-header"><div class="tbl-title">Absolute prices by date &amp; category</div></div>
+      <div id="tbl-abs2"></div>
+    </div>
+    <div class="tbl-card">
+      <div class="tbl-card-header"><div class="tbl-title">Price differential % Yango vs competitors</div></div>
+      <div id="tbl-diff2"></div>
+    </div>
+  </div>
+  <div class="tables-row">
+    <div class="tbl-card">
+      <div class="tbl-card-header"><div class="tbl-title">By peak · Absolute prices</div></div>
+      <div id="tbl-peak-abs2"></div>
+    </div>
+    <div class="tbl-card">
+      <div class="tbl-card-header"><div class="tbl-title">By peak · Differential %</div></div>
+      <div id="tbl-peak-diff2"></div>
+    </div>
+  </div>
+
+  <div id="debug-info"></div>
+</div>
+
+</div><!-- /tab-main -->
+
+<div id="tab-moto" style="display:none;">
+  <div class="content">
+
+    <div class="filters-bar" style="border-radius:5px; margin-bottom:16px;">
+      <div class="filter-group"><label>From</label><input type="date" id="f-d1-moto" min="2026-07-16" onchange="clampMotoFrom()"></div>
+      <div class="filter-group"><label>To</label><input type="date" id="f-d2-moto" onchange="renderMotoTab()"></div>
+      <div class="filter-divider"></div>
+      <span class="filter-tag">Independent from Main Dashboard filters · earliest date: 2026-07-16</span>
+    </div>
+
+    <div class="section-header">
+      <div class="section-title">Moto+ Evaluation — Price by Distance</div>
+      <div class="section-desc">Average Price. Discount by date, competitor and distance bracket.</div>
+    </div>
+    <div class="legend" id="leg-moto"></div>
+    <div class="charts-grid" id="charts-grid-moto"><div class="loading">Loading charts...</div></div>
+
+    <div class="tables-row">
+      <div class="tbl-card">
+        <div class="tbl-card-header"><div class="tbl-title">Absolute prices by date &amp; bracket</div></div>
+        <div id="tbl-abs-moto"></div>
+      </div>
+      <div class="tbl-card">
+        <div class="tbl-card-header"><div class="tbl-title">Price differential % Yango vs competitors</div></div>
+        <div id="tbl-diff-moto"></div>
+      </div>
+    </div>
+    <div class="tables-row">
+      <div class="tbl-card">
+        <div class="tbl-card-header"><div class="tbl-title">By peak · Absolute prices</div></div>
+        <div id="tbl-peak-abs-moto"></div>
+      </div>
+      <div class="tbl-card">
+        <div class="tbl-card-header"><div class="tbl-title">By peak · Differential %</div></div>
+        <div id="tbl-peak-diff-moto"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="tab-points" style="display:none;">
+
+  <div class="filters-bar">
+    <div class="filter-group">
+      <label>Period</label>
+      <div class="points-filter-dropdown">
+        <button type="button" class="points-filter-btn" id="pointsPeriodBtn"><span id="pointsPeriodLabel">All</span><span>▾</span></button>
+        <div class="points-filter-panel" id="pointsPeriodPanel" style="display:none;">
+          <label class="points-filter-all"><input type="checkbox" id="pointsPeriodAll" checked> All</label>
+          <div id="pointsPeriodList"></div>
+        </div>
+      </div>
+    </div>
+    <div class="filter-group">
+      <label>Distance bracket</label>
+      <div class="points-filter-dropdown">
+        <button type="button" class="points-filter-btn" id="pointsBracketBtn"><span id="pointsBracketLabel">All</span><span>▾</span></button>
+        <div class="points-filter-panel" id="pointsBracketPanel" style="display:none;">
+          <label class="points-filter-all"><input type="checkbox" id="pointsBracketAll" checked> All</label>
+          <div id="pointsBracketList"></div>
+        </div>
+      </div>
+    </div>
+    <div class="filter-divider"></div>
+    <span class="filter-tag">Periods are detected automatically whenever the recorded points actually change — not by calendar date</span>
+  </div>
+
+  <div class="content">
+
+    <div class="section-header">
+      <div class="section-title">Points — Route Samples Map</div>
+      <div class="section-desc">Sample routes (Point A → Point B) collected for price benchmarking, plotted on a Caracas map. Source: "Raw_data" tab only.</div>
+    </div>
+
+    <div id="pointsGeocodeStatus" class="geocode-status">Loading points…</div>
+
+    <div class="points-map-wrap">
+      <div class="bracket-legend">
+        <div class="bl-title">Distance Bracket</div>
+        <div id="bracketLegendList"></div>
+      </div>
+      <div id="pointsMap"></div>
+    </div>
+
+    <div class="section-header">
+      <div class="section-title">Selected Points</div>
+      <div class="section-desc">Addresses for the routes currently shown on the map above, with their distance bracket.</div>
+    </div>
+    <div class="points-list" id="pointsListContainer"></div>
+
+  </div>
+</div>
+
+<script>
+var SHEET_ID  = '1M_V9u7gxHCs3L7Q-qoyqDiCxHhQ_ppumbPcZbRHXJIc';
+var GID1      = '1685563282';
+var GID2      = '237632636';
+var BRACKETS  = ['Average','Long','Median','Short','Very Long','Very short'];
+var APP_COLOR = { Yango:'#E02020', Ridery:'#00BFA5', Yummy:'#7B2FBE',
+  'Yango Moto':'#E02020', 'Yummy Moto':'#7B2FBE', 'Ridery Moto Regular':'#00BFA5', 'Ridery Moto Baratica':'#F5A623' };
+var APP_DASH  = { Yango:[], Ridery:[], Yummy:[6,3],
+  'Yango Moto':[], 'Yummy Moto':[6,3], 'Ridery Moto Regular':[], 'Ridery Moto Baratica':[3,2] };
+var MOTO_CATEGORY_NAME = 'Moto';
+var MOTO_MIN_DATE = '2026-07-16'; // earliest "From" date allowed in Moto+ Evaluation's own date filter
+// Only "Ridery Regular" rows (Our Category=Moto, Competition Name=Ridery, Their category=Moto — exact, not "Moto Baratica")
+// are excluded from the general dashboard. Every other Moto row (Yango, Yummy, Ridery Baratica) stays in.
+function isRideryRegularMotoRow(r){
+  var ourCat=String(r[CAT1]||'').trim().toLowerCase();
+  var comp=String(r[COMP1]||'').trim().toLowerCase();
+  var theirCat=String(r[THEIRCAT1]||'').trim().toLowerCase();
+  return ourCat===MOTO_CATEGORY_NAME.toLowerCase() && comp==='ridery' && theirCat==='moto';
+}
+
+var raw1=[], raw1Full=[], raw2=[], charts={};
+var rawJsonTable1=null; // raw {cols,rows} from GID1 (Raw_data), used by the Points tab for index-based column access
+var currentIsoFn = toISO;
+var P1='Price W/O Discount', COMP1='Competition Name', CAT1='Our Category', BR1='Distance bracket', PEAK1='Peak', DATE1='Date', SURGE1='Surge', THEIRCAT1='Their category';
+var P2='Full price', COMP2='Competition Name', CAT2='Our Category', PEAK2='Peak', DATE2='Date';
+
+/* ── EXPORT REGISTRY — stores callbacks to regenerate full-period tables ── */
+var exportRegistry = {};
+
+/* ── PAGINATION STATE ── */
+var PAGE_SIZE = 7;
+var tblPage1 = 0;  // 0 = most recent page, higher = older
+var tblPage2 = 0;
+
+function getPageDates(allDates, page) {
+  if (!allDates.length) return [];
+  var totalPages = getTotalPages(allDates);
+  var p = Math.max(0, Math.min(totalPages - 1, page));
+  var end = allDates.length - p * PAGE_SIZE;
+  var start = Math.max(0, end - PAGE_SIZE);
+  return allDates.slice(start, end);
+}
+
+function getTotalPages(allDates) {
+  return Math.max(1, Math.ceil(allDates.length / PAGE_SIZE));
+}
+
+function navTables(section, dir) {
+  if (section === 1) tblPage1 = Math.max(0, tblPage1 + dir);
+  else               tblPage2 = Math.max(0, tblPage2 + dir);
+  render(true); // keepPage = true, don't reset on navigation
+}
+
+function updateNavBar(navId, allDates, page, section) {
+  var el = document.getElementById(navId);
+  if (!el) return;
+  var totalPages = getTotalPages(allDates);
+  if (!allDates.length || totalPages <= 1) { el.style.display = 'none'; return; }
+  el.style.display = 'flex';
+  var p = Math.max(0, Math.min(totalPages - 1, page));
+  var shown = getPageDates(allDates, p);
+  var fromD = shown.length ? shown[0].slice(5) : '';
+  var toD   = shown.length ? shown[shown.length - 1].slice(5) : '';
+  var prevDis = p >= totalPages - 1 ? 'disabled' : '';
+  var nextDis = p <= 0 ? 'disabled' : '';
+  el.innerHTML =
+    '<button class="nav-btn" '+prevDis+' onclick="navTables('+section+',1)">← Older</button>'
+    + '<span class="nav-label">Showing <b>'+fromD+'</b> – <b>'+toD+'</b></span>'
+    + '<span class="nav-count">Week '+(p+1)+' of '+totalPages+'</span>'
+    + '<button class="nav-btn" '+nextDis+' onclick="navTables('+section+',-1)">Newer →</button>';
+}
+
+/* ── DATA LOADING ── */
+function parseCSVLine(line){
+  var result=[], cur='', inQuote=false;
+  for(var i=0;i<line.length;i++){
+    var c=line[i];
+    if(c==='"'){ inQuote=!inQuote; }
+    else if(c===','&&!inQuote){ result.push(cur); cur=''; }
+    else { cur+=c; }
+  }
+  result.push(cur);
+  return result;
+}
+
+function normalizePeak(v){
+  if(!v) return v;
+  var s=String(v).trim();
+  if(s.toLowerCase()==='evening peak') return 'Evening Peak';
+  if(s.toLowerCase()==='morning peak') return 'Morning Peak';
+  if(s.toLowerCase()==='no range') return 'No Range';
+  return s;
+}
+
+function parseRows(json){
+  var cols=json.table.cols.map(function(c){ return c.label.trim(); });
+  return json.table.rows.map(function(r){
+    var o={};
+    r.c.forEach(function(cell,i){ o[cols[i]]=cell?(cell.v!==null?cell.v:(cell.f||'')):'' });
+    var pk=Object.keys(o).find(function(k){return k.toLowerCase()==='peak';});
+    if(pk&&o[pk]) o[pk]=normalizePeak(String(o[pk]).trim());
+    return o;
+  });
+}
+
+function detectCols(rows, isMin){
+  var keys=Object.keys(rows[0]);
+  if(isMin){
+    P2   =keys.find(function(k){return /full.price/i.test(k)||(/price/i.test(k)&&!/discount/i.test(k));}) || 'Full price';
+    COMP2=keys.find(function(k){return /competition/i.test(k);}) || 'Competition Name';
+    CAT2 =keys.find(function(k){return /category/i.test(k);})   || 'Our Category';
+    PEAK2=keys.find(function(k){return /^peak$/i.test(k);})     || 'Peak';
+    DATE2=keys.find(function(k){return /^date$/i.test(k);})     || 'Date';
+  } else {
+    P1   =keys.find(function(k){return /price/i.test(k)&&/w\/o/i.test(k);})
+         ||keys.find(function(k){return /price/i.test(k)&&/discount/i.test(k)&&!/^price with/i.test(k);})
+         ||'Price W/O Discount';
+    COMP1=keys.find(function(k){return /competition/i.test(k);}) || 'Competition Name';
+    CAT1 =keys.find(function(k){return /^our/i.test(k)&&/categ/i.test(k);}) || keys.find(function(k){return /category/i.test(k)&&!/their/i.test(k);}) || 'Our Category';
+    THEIRCAT1=keys.find(function(k){return /their/i.test(k)&&/categ/i.test(k);}) || 'Their category';
+    BR1  =keys.find(function(k){return /bracket/i.test(k);})    || 'Distance bracket';
+    PEAK1=keys.find(function(k){return /^peak$/i.test(k);})     || 'Peak';
+    DATE1=keys.find(function(k){return /^date$/i.test(k);})     || 'Date';
+    SURGE1=keys.find(function(k){return /^surge$/i.test(k);})   || 'Surge';
+  }
+}
+
+async function loadAll(){
+  document.getElementById('status').textContent='Loading...';
+  try{
+    var r1=await fetch('https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:json&gid='+GID1);
+    var t1=await r1.text();
+    var j1=JSON.parse(t1.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/)[1]);
+    rawJsonTable1=j1.table; // kept for the Points tab — reads columns by INDEX to sidestep the sheet's duplicate "Point A/B" columns further right
+    raw1Full=parseRows(j1);
+    if(raw1Full.length) detectCols(raw1Full,false);
+    // General dashboard evaluates ALL categories, including Moto — except "Ridery Regular" Moto rows,
+    // which are exclusive to the "Moto+ Evaluation" tab.
+    raw1=raw1Full.filter(function(r){ return !isRideryRegularMotoRow(r); });
+
+    var r2=await fetch('https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/gviz/tq?tqx=out:json&gid='+GID2);
+    var t2=await r2.text();
+    var j2=JSON.parse(t2.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\)/)[1]);
+    raw2=parseRows(j2);
+    if(raw2.length) detectCols(raw2,true);
+
+    populateFilters();
+    render();
+    renderWeeklyByCategory();
+
+    var s1=raw1[0]||{}, s2=raw2[0]||{};
+    var ad1=Array.from(new Set(raw1.map(function(r){return toISO(r[DATE1]);}).filter(Boolean))).sort();
+    var ad2=Array.from(new Set(raw2.map(function(r){return toISO2(r[DATE2]);}).filter(Boolean))).sort();
+    document.getElementById('debug-info').innerHTML=
+      '<b>Tab1:</b> price="'+P1+'" bracket="'+BR1+'" rows='+raw1.length+' dates:'+ad1[0]+'→'+ad1[ad1.length-1]+'<br>'
+      +'<b>Tab2:</b> price="'+P2+'" rows='+raw2.length+' dates:'+ad2[0]+'→'+ad2[ad2.length-1]+'<br>'
+      +'<b>Tab1[0]:</b> price_raw="'+s1[P1]+'" parsed='+parsePrice(s1[P1])+' date_raw="'+s1[DATE1]+'" parsed='+toISO(s1[DATE1])+'<br>'
+      +'<b>Tab2[0]:</b> price_raw="'+s2[P2]+'" parsed='+parsePrice(s2[P2])+' date_raw="'+s2[DATE2]+'" parsed='+toISO2(s2[DATE2]);
+
+    var n=new Date();
+    document.getElementById('status').textContent='Updated: '+n.toLocaleString('es-VE',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    if(document.getElementById('tab-points').style.display!=='none' && !pointsRoutes.length) loadPointsData();
+  } catch(e){
+    document.getElementById('status').textContent='Error loading data';
+    document.getElementById('charts-grid1').innerHTML='<div class="error">Could not connect to Google Sheet.<br>'+e.message+'</div>';
+  }
+}
+
+/* ── HELPERS ── */
+function parsePrice(v){
+  if(typeof v==='number') return v;
+  if(!v) return null;
+  var s=String(v).replace(/[$\s]/g,'').replace(',','.');
+  var n=parseFloat(s);
+  return isNaN(n)?null:n;
+}
+function avg(arr){ var a=arr.filter(function(x){return x!=null&&!isNaN(x);}); return a.length?a.reduce(function(s,x){return s+x;},0)/a.length:null; }
+function fmt(v,d){ d=d||2; return v==null?'-':(+v).toFixed(d); }
+
+function parseDate(v){ return parseDateFmt(v,'dmy'); }
+function parseDate2(v){ return parseDateFmt(v,'mdy'); }
+function parseDateFmt(v,fmt){
+  if(!v) return null;
+  if(v instanceof Date) return isNaN(v.getTime())?null:v;
+  if(typeof v==='number'){ var d=new Date((v-25569)*86400*1000); return isNaN(d.getTime())?null:d; }
+  if(typeof v==='string'){
+    v=v.trim();
+    var gm=v.match(/^Date\((\d+),(\d+),(\d+)\)/);
+    if(gm){ var d2=new Date(parseInt(gm[1]),parseInt(gm[2]),parseInt(gm[3])); return isNaN(d2.getTime())?null:d2; }
+    var sl=v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if(sl){
+      var a=parseInt(sl[1]),b=parseInt(sl[2]),y=parseInt(sl[3]);
+      var d3=fmt==='dmy'?new Date(y,b-1,a):new Date(y,a-1,b);
+      return isNaN(d3.getTime())?null:d3;
+    }
+    var im=v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if(im){ var d4=new Date(parseInt(im[1]),parseInt(im[2])-1,parseInt(im[3])); return isNaN(d4.getTime())?null:d4; }
+    var d5=new Date(v); return isNaN(d5.getTime())?null:d5;
+  }
+  return null;
+}
+function toISO(v){ var d=parseDate(v); return d?d.toISOString().slice(0,10):null; }
+function toISO2(v){ var d=parseDate2(v); return d?d.toISOString().slice(0,10):null; }
+
+function populateFilters(){
+  var cats=Array.from(new Set(raw1.map(function(r){return r[CAT1];}).concat(raw2.map(function(r){return r[CAT2];})).filter(Boolean))).sort();
+  var brackets=Array.from(new Set(raw1.map(function(r){return r[BR1];}).filter(Boolean))).sort();
+  var allPeaks=Array.from(new Set(raw1.map(function(r){return r[PEAK1];}).concat(raw2.map(function(r){return r[PEAK2];})).filter(Boolean))).sort();
+  document.getElementById('f-cat').innerHTML='<option value="">All</option>'+cats.map(function(c){return'<option>'+c+'</option>';}).join('');
+  document.getElementById('f-bracket').innerHTML='<option value="">All</option>'+brackets.map(function(b){return'<option>'+b+'</option>';}).join('');
+  document.getElementById('f-peak').innerHTML='<option value="">All</option>'+allPeaks.map(function(p){return'<option>'+p+'</option>';}).join('');
+  var dates=raw1.map(function(r){return parseDate(r[DATE1]);}).filter(Boolean).sort(function(a,b){return a-b;});
+  if(dates.length){
+    document.getElementById('f-d1').value=dates[0].toISOString().slice(0,10);
+    document.getElementById('f-d2').value=dates[dates.length-1].toISOString().slice(0,10);
+  }
+}
+
+function getShared(){
+  return { cat:document.getElementById('f-cat').value, peak:document.getElementById('f-peak').value,
+           d1:document.getElementById('f-d1').value, d2:document.getElementById('f-d2').value };
+}
+
+function filterData1(){
+  var f=getShared(), bracket=document.getElementById('f-bracket').value, surge=document.getElementById('f-surge').value;
+  return raw1.filter(function(r){
+    if(f.cat&&r[CAT1]!==f.cat) return false;
+    if(bracket&&r[BR1]!==bracket) return false;
+    if(f.peak&&r[PEAK1]!==f.peak) return false;
+    if(surge&&String(r[SURGE1])!==surge) return false;
+    var rd=parseDate(r[DATE1]);
+    if(f.d1&&rd&&rd<new Date(f.d1)) return false;
+    if(f.d2&&rd&&rd>new Date(f.d2+'T23:59:59')) return false;
+    return true;
+  });
+}
+
+function filterData2(){
+  var f=getShared();
+  return raw2.filter(function(r){
+    if(f.cat&&r[CAT2]!==f.cat) return false;
+    if(f.peak&&r[PEAK2]!==f.peak) return false;
+    var rd=parseDate2(r[DATE2]);
+    if(f.d1&&rd&&rd<new Date(f.d1)) return false;
+    if(f.d2&&rd&&rd>new Date(f.d2+'T23:59:59')) return false;
+    return true;
+  });
+}
+
+function getApps(data,compCol,yangoLabel){ yangoLabel=yangoLabel||'Yango'; return [yangoLabel].concat(Array.from(new Set(data.map(function(r){return r[compCol];}).filter(function(v){return v&&v!==yangoLabel;})))); }
+function byApp(data,app,compCol){ return data.filter(function(r){return r[compCol]===app;}); }
+
+function makeLegend(id,apps){
+  document.getElementById(id).innerHTML=apps.map(function(a){
+    var c=APP_COLOR[a]||'#888', isDash=APP_DASH[a]&&APP_DASH[a].length;
+    var st=isDash?'width:24px;display:inline-block;border-top:3px dashed '+c+';height:0;':'width:24px;display:inline-block;height:3px;background:'+c+';border-radius:2px;';
+    return '<span><span style="'+st+'"></span>'+a+'</span>';
+  }).join('');
+}
+
+function destroyCharts(prefix){
+  Object.keys(charts).forEach(function(k){ if(k.indexOf(prefix)===0){ try{charts[k].destroy();}catch(e){} delete charts[k]; } });
+}
+
+function makeLineCharts(gridId,data,groupKey,groupVals,compCol,dateCol,priceCol,suffix,yangoLabel){
+  var grid=document.getElementById(gridId);
+  grid.innerHTML=''; grid.style.gridTemplateColumns='repeat('+Math.min(3,groupVals.length)+',1fr)';
+  destroyCharts('ch'+suffix);
+  var apps=getApps(data,compCol,yangoLabel);
+  var dates=Array.from(new Set(data.map(function(r){return currentIsoFn(r[dateCol]);}).filter(Boolean))).sort();
+  groupVals.forEach(function(gval){
+    var cid='ch'+suffix+'_'+gval.replace(/\s/g,'_');
+    var card=document.createElement('div');
+    card.className='chart-card';
+    card.innerHTML='<div class="ct">'+gval+'</div><div style="position:relative;height:160px;"><canvas id="'+cid+'"></canvas></div>';
+    grid.appendChild(card);
+    setTimeout(function(){
+      var el=document.getElementById(cid); if(!el) return;
+      var datasets=apps.map(function(app){
+        var rows=byApp(data,app,compCol).filter(function(r){return r[groupKey]===gval;});
+        var pts=dates.map(function(d){
+          var a=avg(rows.filter(function(r){return currentIsoFn(r[dateCol])===d;}).map(function(r){return parsePrice(r[priceCol]);}));
+          return a!=null?parseFloat(a.toFixed(2)):null;
+        });
+        return{label:app,data:pts,borderColor:APP_COLOR[app]||'#888',backgroundColor:'transparent',tension:0.3,borderDash:APP_DASH[app]||[],borderWidth:2,pointRadius:2,spanGaps:true};
+      });
+      charts[cid]=new Chart(el,{type:'line',data:{labels:dates.map(function(d){return d.slice(5);}),datasets:datasets},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{maxTicksLimit:6,font:{size:9},color:'#888'},grid:{color:'#f0f0f0'}},y:{ticks:{font:{size:9},color:'#888',callback:function(v){return'$'+v.toFixed(1);}},grid:{color:'#f0f0f0'}}}}});
+    },80);
+  });
+}
+
+/* ── EXCEL EXPORT ── */
+function exportTable(tableId, filename){
+  var tbl=document.getElementById(tableId);
+  if(!tbl){ alert('Table not found'); return; }
+  var wb=XLSX.utils.book_new();
+  var ws=XLSX.utils.table_to_sheet(tbl);
+  XLSX.utils.book_append_sheet(wb,ws,'Data');
+  XLSX.writeFile(wb,(filename||'export')+'.xlsx');
+}
+
+var EXPORT_SVG='<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>';
+
+/* setTableWithBtn:
+   dualExport=false → single "Excel" button (exports visible table)
+   dualExport=true  → two buttons: "Page" (visible) + "Full period" (all filtered dates) */
+function setTableWithBtn(elId, tableHtml, filename, dualExport){
+  var tid='ti-'+elId;
+  var btns='<div style="display:flex;justify-content:flex-end;gap:4px;margin-bottom:5px;">';
+  if(dualExport){
+    btns+='<button class="export-btn" onclick="exportTable(\''+tid+'\',\''+filename+'_page\')">'+EXPORT_SVG+' Page</button>';
+    btns+='<button class="export-btn" style="background:#f0f4ff;border-color:#99aee0;" onclick="exportTableFull(\''+elId+'\',\''+filename+'_full_period\')">'+EXPORT_SVG+' Full period</button>';
+  } else {
+    btns+='<button class="export-btn" onclick="exportTable(\''+tid+'\',\''+filename+'\')">'+EXPORT_SVG+' Excel</button>';
+  }
+  btns+='</div>';
+  document.getElementById(elId).innerHTML=btns+tableHtml.replace(/^<table/,'<table id="'+tid+'"');
+}
+
+/* Export the full-period version stored in exportRegistry */
+function exportTableFull(elId, filename){
+  var fn=exportRegistry[elId];
+  if(!fn){ alert('No full-period data registered for this table.'); return; }
+  var html=fn();
+  var tmp=document.createElement('div');
+  tmp.style.cssText='position:absolute;left:-9999px;top:-9999px;';
+  tmp.innerHTML=html;
+  document.body.appendChild(tmp);
+  var tbl=tmp.querySelector('table');
+  if(!tbl){ document.body.removeChild(tmp); alert('Could not build full-period table.'); return; }
+  var wb=XLSX.utils.book_new();
+  var ws=XLSX.utils.table_to_sheet(tbl);
+  XLSX.utils.book_append_sheet(wb,ws,'Data');
+  XLSX.writeFile(wb,(filename||'export')+'.xlsx');
+  document.body.removeChild(tmp);
+}
+
+/* ── TABLE HTML BUILDERS (separated so export can call with different date sets) ── */
+function buildTableAbsHtml(data, showDates, allDates, groups, groupKey, compCol, dateCol, priceCol, isoFn, yangoLabel){
+  var apps=getApps(data,compCol,yangoLabel);
+  var html='<table><thead><tr><th>Date</th>';
+  groups.forEach(function(g){apps.forEach(function(a){html+='<th style="color:'+(APP_COLOR[a]||'#555')+'">'+g+'<br>'+a+'</th>';});});
+  html+='</tr></thead><tbody>';
+  showDates.forEach(function(d){
+    html+='<tr><td>'+d.slice(5)+'</td>';
+    groups.forEach(function(g){apps.forEach(function(a){
+      var rows=byApp(data,a,compCol).filter(function(r){return isoFn(r[dateCol])===d&&r[groupKey]===g;});
+      html+='<td>'+fmt(avg(rows.map(function(r){return parsePrice(r[priceCol]);})))+'</td>';
+    });});
+    html+='</tr>';
+  });
+  var avgLabel=allDates.length>showDates.length?'Period avg':'Average';
+  html+='</tbody><tfoot><tr class="avg-row"><td>'+avgLabel+'</td>';
+  groups.forEach(function(g){apps.forEach(function(a){
+    var rows=byApp(data,a,compCol).filter(function(r){return allDates.indexOf(isoFn(r[dateCol]))!==-1&&r[groupKey]===g;});
+    html+='<td>'+fmt(avg(rows.map(function(r){return parsePrice(r[priceCol]);})))+'</td>';
+  });});
+  return html+'</tr></tfoot></table>';
+}
+
+function buildTableDiffHtml(data, showDates, allDates, groups, groupKey, compCol, dateCol, priceCol, isoFn, yangoLabel){
+  yangoLabel=yangoLabel||'Yango';
+  var apps=getApps(data,compCol,yangoLabel), compApps=apps.filter(function(a){return a!==yangoLabel;});
+  var html='<table><thead><tr><th>Date</th>';
+  groups.forEach(function(g){compApps.forEach(function(a){html+='<th style="color:'+(APP_COLOR[a]||'#555')+'">'+g+'<br>vs '+a+'</th>';});});
+  html+='</tr></thead><tbody>';
+  showDates.forEach(function(d){
+    html+='<tr><td>'+d.slice(5)+'</td>';
+    groups.forEach(function(g){compApps.forEach(function(a){
+      var yA=avg(byApp(data,yangoLabel,compCol).filter(function(r){return isoFn(r[dateCol])===d&&r[groupKey]===g;}).map(function(r){return parsePrice(r[priceCol]);}));
+      var cA=avg(byApp(data,a,compCol).filter(function(r){return isoFn(r[dateCol])===d&&r[groupKey]===g;}).map(function(r){return parsePrice(r[priceCol]);}));
+      if(yA==null||cA==null||cA===0){html+='<td>-</td>';return;}
+      var pct=((yA-cA)/cA)*100;
+      html+='<td class="'+(pct<0?'neg':'pos')+'">'+(pct>=0?'+':'')+pct.toFixed(1)+'%</td>';
+    });});
+    html+='</tr>';
+  });
+  var avgLabel=allDates.length>showDates.length?'Period avg':'Average';
+  html+='</tbody><tfoot><tr class="avg-row"><td>'+avgLabel+'</td>';
+  groups.forEach(function(g){compApps.forEach(function(a){
+    var yA=avg(byApp(data,yangoLabel,compCol).filter(function(r){return allDates.indexOf(isoFn(r[dateCol]))!==-1&&r[groupKey]===g;}).map(function(r){return parsePrice(r[priceCol]);}));
+    var cA=avg(byApp(data,a,compCol).filter(function(r){return allDates.indexOf(isoFn(r[dateCol]))!==-1&&r[groupKey]===g;}).map(function(r){return parsePrice(r[priceCol]);}));
+    if(yA==null||cA==null||cA===0){html+='<td>-</td>';return;}
+    var pct=((yA-cA)/cA)*100;
+    html+='<td class="'+(pct<0?'neg':'pos')+'">'+(pct>=0?'+':'')+pct.toFixed(1)+'%</td>';
+  });});
+  return html+'</tr></tfoot></table>';
+}
+
+/* ── TABLES WITH AVERAGE ROW ── */
+function makeTableAbs(elId, data, showDates, allDates, groups, groupKey, compCol, dateCol, priceCol){
+  var isoFn=currentIsoFn; // capture now — closure used by exportRegistry callback
+  var html=buildTableAbsHtml(data,showDates,allDates,groups,groupKey,compCol,dateCol,priceCol,isoFn);
+  exportRegistry[elId]=function(){ return buildTableAbsHtml(data,allDates,allDates,groups,groupKey,compCol,dateCol,priceCol,isoFn); };
+  setTableWithBtn(elId, html, elId.replace('tbl-',''), allDates.length>PAGE_SIZE);
+}
+
+function makeTableDiff(elId, data, showDates, allDates, groups, groupKey, compCol, dateCol, priceCol){
+  var isoFn=currentIsoFn;
+  var html=buildTableDiffHtml(data,showDates,allDates,groups,groupKey,compCol,dateCol,priceCol,isoFn);
+  exportRegistry[elId]=function(){ return buildTableDiffHtml(data,allDates,allDates,groups,groupKey,compCol,dateCol,priceCol,isoFn); };
+  setTableWithBtn(elId, html, elId.replace('tbl-',''), allDates.length>PAGE_SIZE);
+}
+
+function makeTablePeak(absId, diffId, data, groups, groupKey, compCol, peakCol, priceCol, yangoLabel){
+  yangoLabel=yangoLabel||'Yango';
+  var peaks=Array.from(new Set(data.map(function(r){return r[peakCol];}).filter(Boolean))).sort();
+  var apps=getApps(data,compCol,yangoLabel);
+  var compApps=apps.filter(function(a){return a!==yangoLabel;});
+
+  var html='<table><thead><tr><th>Peak</th>';
+  groups.forEach(function(g){apps.forEach(function(a){html+='<th style="color:'+(APP_COLOR[a]||'#555')+'">'+g+'<br>'+a+'</th>';});});
+  html+='</tr></thead><tbody>';
+  peaks.forEach(function(pk){
+    html+='<tr><td>'+pk+'</td>';
+    groups.forEach(function(g){apps.forEach(function(a){
+      var rows=byApp(data,a,compCol).filter(function(r){return r[peakCol]===pk&&r[groupKey]===g;});
+      html+='<td>'+fmt(avg(rows.map(function(r){return parsePrice(r[priceCol]);})))+'</td>';
+    });});
+    html+='</tr>';
+  });
+  html+='</tbody><tfoot><tr class="avg-row"><td>Average</td>';
+  groups.forEach(function(g){apps.forEach(function(a){
+    var rows=byApp(data,a,compCol).filter(function(r){return r[groupKey]===g;});
+    html+='<td>'+fmt(avg(rows.map(function(r){return parsePrice(r[priceCol]);})))+'</td>';
+  });});
+  html+='</tr></tfoot></table>';
+  setTableWithBtn(absId, html, absId.replace('tbl-',''), false);
+
+  var html2='<table><thead><tr><th>Peak</th>';
+  groups.forEach(function(g){compApps.forEach(function(a){html2+='<th style="color:'+(APP_COLOR[a]||'#555')+'">'+g+'<br>vs '+a+'</th>';});});
+  html2+='</tr></thead><tbody>';
+  peaks.forEach(function(pk){
+    html2+='<tr><td>'+pk+'</td>';
+    groups.forEach(function(g){compApps.forEach(function(a){
+      var yA=avg(byApp(data,yangoLabel,compCol).filter(function(r){return r[peakCol]===pk&&r[groupKey]===g;}).map(function(r){return parsePrice(r[priceCol]);}));
+      var cA=avg(byApp(data,a,compCol).filter(function(r){return r[peakCol]===pk&&r[groupKey]===g;}).map(function(r){return parsePrice(r[priceCol]);}));
+      if(yA==null||cA==null||cA===0){html2+='<td>-</td>';return;}
+      var pct=((yA-cA)/cA)*100;
+      html2+='<td class="'+(pct<0?'neg':'pos')+'">'+(pct>=0?'+':'')+pct.toFixed(1)+'%</td>';
+    });});
+    html2+='</tr>';
+  });
+  html2+='</tbody><tfoot><tr class="avg-row"><td>Average</td>';
+  groups.forEach(function(g){compApps.forEach(function(a){
+    var yA=avg(byApp(data,yangoLabel,compCol).filter(function(r){return r[groupKey]===g;}).map(function(r){return parsePrice(r[priceCol]);}));
+    var cA=avg(byApp(data,a,compCol).filter(function(r){return r[groupKey]===g;}).map(function(r){return parsePrice(r[priceCol]);}));
+    if(yA==null||cA==null||cA===0){html2+='<td>-</td>';return;}
+    var pct=((yA-cA)/cA)*100;
+    html2+='<td class="'+(pct<0?'neg':'pos')+'">'+(pct>=0?'+':'')+pct.toFixed(1)+'%</td>';
+  });});
+  html2+='</tr></tfoot></table>';
+  setTableWithBtn(diffId, html2, diffId.replace('tbl-',''), false);
+}
+
+/* ── WEEKLY CARD — uses raw1 (Price by Distance), filter-independent ── */
+function renderWeeklyByCategory(){
+  var el=document.getElementById('card-weekly-cats');
+  if(!el) return;
+  if(!raw1.length){ el.innerHTML='<div class="loading">No data available.</div>'; return; }
+
+  // All dates in raw1 (unfiltered)
+  var allDates=Array.from(new Set(raw1.map(function(r){return toISO(r[DATE1]);}).filter(Boolean))).sort();
+  if(allDates.length<2){ el.innerHTML='<div class="loading">Not enough dates for weekly comparison.</div>'; return; }
+
+  var latestISO=allDates[allDates.length-1];
+  var latest=new Date(latestISO+'T12:00:00');
+  var currStart=new Date(latest.getTime()-6*86400000);
+  var prevEnd=new Date(currStart.getTime()-86400000);
+  var prevStart=new Date(prevEnd.getTime()-6*86400000);
+
+  var currDates=allDates.filter(function(d){ var dt=new Date(d+'T12:00:00'); return dt>=currStart&&dt<=latest; });
+  var prevDates=allDates.filter(function(d){ var dt=new Date(d+'T12:00:00'); return dt>=prevStart&&dt<=prevEnd; });
+
+  var apps=getApps(raw1,COMP1);
+  // Group by category (CAT1) — average across all brackets/peaks
+  var cats=Array.from(new Set(raw1.map(function(r){return r[CAT1];}).filter(Boolean))).sort();
+
+  var prevLabel=prevStart.toISOString().slice(5,10)+' – '+prevEnd.toISOString().slice(5,10);
+  var currLabel=currStart.toISOString().slice(5,10)+' – '+latest.toISOString().slice(5,10);
+  var tableId='ti-weekly-cats';
+
+  var tbl='<table id="'+tableId+'"><thead><tr><th>Category</th>';
+  apps.forEach(function(a){
+    tbl+='<th style="color:'+(APP_COLOR[a]||'#555')+'">'+a+'<br>Prev wk</th>';
+    tbl+='<th style="color:'+(APP_COLOR[a]||'#555')+'">'+a+'<br>Curr wk</th>';
+    tbl+='<th style="color:'+(APP_COLOR[a]||'#555')+'">'+a+'<br>Δ</th>';
+  });
+  tbl+='</tr></thead><tbody>';
+
+  var totals={};
+  apps.forEach(function(a){ totals[a]={prev:[],curr:[]}; });
+
+  cats.forEach(function(cat){
+    tbl+='<tr><td>'+cat+'</td>';
+    apps.forEach(function(a){
+      var rows=byApp(raw1,a,COMP1).filter(function(r){return r[CAT1]===cat;});
+      var pA=avg(rows.filter(function(r){return prevDates.indexOf(toISO(r[DATE1]))!==-1;}).map(function(r){return parsePrice(r[P1]);}));
+      var cA=avg(rows.filter(function(r){return currDates.indexOf(toISO(r[DATE1]))!==-1;}).map(function(r){return parsePrice(r[P1]);}));
+      if(pA!=null) totals[a].prev.push(pA);
+      if(cA!=null) totals[a].curr.push(cA);
+      var delta=null, cls='';
+      if(pA!=null&&cA!=null&&pA!==0){ delta=((cA-pA)/pA)*100; cls=delta<0?'neg':'pos'; }
+      tbl+='<td>'+(pA!=null?'$'+pA.toFixed(2):'-')+'</td>';
+      tbl+='<td>'+(cA!=null?'$'+cA.toFixed(2):'-')+'</td>';
+      tbl+='<td class="'+cls+'">'+(delta!=null?(delta>=0?'+':'')+delta.toFixed(1)+'%':'-')+'</td>';
+    });
+    tbl+='</tr>';
+  });
+
+  tbl+='</tbody><tfoot><tr class="avg-row"><td>Average</td>';
+  apps.forEach(function(a){
+    var pA=avg(totals[a].prev), cA=avg(totals[a].curr);
+    var delta=null, cls='';
+    if(pA!=null&&cA!=null&&pA!==0){ delta=((cA-pA)/pA)*100; cls=delta<0?'neg':'pos'; }
+    tbl+='<td>'+(pA!=null?'$'+pA.toFixed(2):'-')+'</td>';
+    tbl+='<td>'+(cA!=null?'$'+cA.toFixed(2):'-')+'</td>';
+    tbl+='<td class="'+cls+'">'+(delta!=null?(delta>=0?'+':'')+delta.toFixed(1)+'%':'-')+'</td>';
+  });
+  tbl+='</tr></tfoot></table>';
+
+  var noDataWarn='';
+  if(!currDates.length) noDataWarn+=' &nbsp;<span style="color:#e02020;font-size:10px;">(no data in current week)</span>';
+  if(!prevDates.length) noDataWarn+=' &nbsp;<span style="color:#e02020;font-size:10px;">(no data in previous week)</span>';
+
+  el.innerHTML=
+    '<div class="weekly-card-accent"></div>'
+    +'<div class="weekly-card-header">'
+      +'<div>'
+        +'<div class="weekly-card-title">Avg price by category · Previous week vs. current week &nbsp;·&nbsp; Price by Distance</div>'
+        +'<div class="weekly-card-sub">Independent of date filter &nbsp;·&nbsp; '
+          +'<b>Prev week:</b> '+prevLabel+' &nbsp;→&nbsp; <b>Curr week:</b> '+currLabel+noDataWarn
+        +'</div>'
+      +'</div>'
+      +'<button class="export-btn" onclick="exportTable(\''+tableId+'\',\'weekly_category_price_dist\')">'+EXPORT_SVG+' Excel</button>'
+    +'</div>'
+    +'<div style="overflow-x:auto;">'+tbl+'</div>';
+}
+
+/* ── TAB SWITCHING ── */
+var motoTabRendered = false;
+var pointsTabLoaded = false;
+function switchTab(name){
+  document.getElementById('tab-main').style.display = name==='main' ? '' : 'none';
+  document.getElementById('tab-moto').style.display = name==='moto' ? '' : 'none';
+  document.getElementById('tab-points').style.display = name==='points' ? '' : 'none';
+  document.querySelectorAll('#mainTabs .tab-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.tab===name); });
+  if(name==='moto') renderMotoTab();
+  if(name==='points' && (!pointsTabLoaded || !pointsRoutes.length)){
+    pointsTabLoaded = true;
+    loadPointsData();
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   POINTS TAB — map of sample routes (Point A → Point B), sourced
+   EXCLUSIVELY from the "Raw_data" tab (same GID1 already loaded by the
+   main dashboard — no separate fetch, no other tab is read).
+
+   Key facts about the data that shaped this implementation:
+   - The unique route identifier is the (Point A, Point B) TEXT PAIR —
+     the "No." column is NOT reliable (most "No." values are reused
+     across several different point pairs), so we group by pair instead.
+   - "Point A coordinates" / "Point B coordinates" are plain "lat, lon"
+     text for most rows — parsed directly, no geocoding needed. A small
+     minority of pairs only ever have a Google Maps short link in that
+     column instead of real coordinates; for those we fall back to
+     geocoding the human-readable address via OpenStreetMap Nominatim
+     (cached in localStorage so it only happens once per address, ever).
+     Routes that still have no coordinates after that fallback are simply
+     left out of the map AND the list below — only what's actually drawn
+     on the map is listed.
+   - We read columns by INDEX (not by name) because the sheet has a
+     second, unrelated set of "Point A"/"Point B"/... columns further to
+     the right — reading by name would silently grab the wrong ones since
+     both share identical header labels.
+   - Point A / Point B text shown everywhere (map popups + list) is used
+     completely as-is from the "Raw_data" sheet — no reformatting.
+   - Period filter is NOT calendar-based. Each date's exact set of
+     recorded (Point A, Point B) pairs is compared day over day; a new
+     "period" starts only when that set actually changes. In the current
+     data this yields exactly two periods (01 Dec 2025 – 14 Jul 2026, then
+     16 Jul 2026 – present) — new periods will appear automatically the
+     next time the underlying points change, with no code changes needed.
+   - Distance bracket filter is multi-select, matching the period filter.
+   ══════════════════════════════════════════════════════════════════ */
+
+var RD_COL = { no:0, pointA:1, pointB:2, pointACoord:3, pointBCoord:4, distanceKm:6, ourCategory:7, bracket:11, date:12 };
+var COORD_RE = /^-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?$/;
+
+var BRACKET_COLORS = {
+  'Very short': '#16a085',
+  'Short':      '#2980b9',
+  'Median':     '#f1c40f',
+  'Average':    '#9b59b6',
+  'Long':       '#e67e22',
+  'Very Long':  '#c0392b'
+};
+var BRACKET_ORDER = ['Very short','Short','Median','Average','Long','Very Long'];
+var CARACAS_CENTER = [10.4880, -66.8792];
+
+var pointsRoutes = [];   // one entry per unique (Point A, Point B) pair
+var pointsPeriods = [];  // [{id, startISO, endISO, label}], derived from actual content changes
+var pointsSelectedPeriods = new Set();
+var pointsSelectedBrackets = new Set();
+var leafletMap = null;
+var leafletLayers = [];
+var geocodeCache = {};
+
+function cellVal(cell){ return cell ? (cell.v!==null && cell.v!==undefined ? cell.v : (cell.f||'')) : ''; }
+
+function loadGeocodeCache(){
+  try { geocodeCache = JSON.parse(localStorage.getItem('yango_geocode_cache_v2') || '{}'); }
+  catch(e){ geocodeCache = {}; }
+}
+function saveGeocodeCache(){
+  try { localStorage.setItem('yango_geocode_cache_v2', JSON.stringify(geocodeCache)); } catch(e){}
+}
+async function geocodeAddress(address){
+  var key = address.trim();
+  if(geocodeCache[key] !== undefined) return geocodeCache[key];
+  var shortName = key.split(',')[0].replace(/\"/g,'').trim();
+  var candidates = [shortName + ', Caracas, Venezuela', key];
+  for(var i=0;i<candidates.length;i++){
+    try{
+      var url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=ve&q=' + encodeURIComponent(candidates[i]);
+      var res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      var json = await res.json();
+      if(json && json.length){
+        var result = { lat: parseFloat(json[0].lat), lon: parseFloat(json[0].lon) };
+        geocodeCache[key] = result;
+        saveGeocodeCache();
+        return result;
+      }
+      if(i<candidates.length-1) await sleep(1100);
+    } catch(e){}
+  }
+  geocodeCache[key] = null;
+  saveGeocodeCache();
+  return null;
+}
+function sleep(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+function parseCoordText(s){
+  if(!s || !COORD_RE.test(s.trim())) return null;
+  var parts = s.split(',');
+  return { lat: parseFloat(parts[0]), lon: parseFloat(parts[1]) };
+}
+
+var PERIOD_MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function fmtPeriodDate(iso){
+  var p = iso.split('-').map(Number);
+  return String(p[2]).padStart(2,'0') + ' ' + PERIOD_MONTHS[p[1]-1] + ' ' + p[0];
+}
+function isoFromDate(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+
+/* Detects periods purely from when the day's exact set of (Point A, Point B) pairs changes —
+   no calendar assumptions, so it self-adjusts whenever new points get added to Raw_data later. */
+function detectContentPeriods(dateToPairSig){
+  var dates = Object.keys(dateToPairSig).sort();
+  if(!dates.length) return [];
+  var periods = [];
+  var curStart = dates[0], curSig = dateToPairSig[dates[0]];
+  for(var i=1;i<dates.length;i++){
+    var d = dates[i], sig = dateToPairSig[d];
+    if(sig !== curSig){
+      periods.push({ startISO: curStart, endISO: dates[i-1], sig: curSig });
+      curStart = d; curSig = sig;
+    }
+  }
+  periods.push({ startISO: curStart, endISO: dates[dates.length-1], sig: curSig });
+  periods.forEach(function(p, i){
+    var isLast = (i === periods.length-1);
+    p.id = 'p'+i;
+    p.label = fmtPeriodDate(p.startISO) + ' – ' + (isLast ? 'Present' : fmtPeriodDate(p.endISO));
+  });
+  return periods;
+}
+
+async function loadPointsData(){
+  loadGeocodeCache();
+  var statusEl = document.getElementById('pointsGeocodeStatus');
+
+  if(!rawJsonTable1){
+    statusEl.textContent = 'Main dashboard data not loaded yet — switch to "Main Dashboard" once, then come back.';
+    return;
+  }
+  statusEl.textContent = 'Processing Raw_data rows…';
+
+  // Pass 1 — group rows by (Point A, Point B) pair, and separately track each date's exact pair-set signature.
+  var byPair = {};
+  var dateToPairsSet = {}; // ISO date -> Set of pair keys
+
+  rawJsonTable1.rows.forEach(function(row){
+    var c = row.c;
+    if(!c || c.length <= RD_COL.date) return;
+    var pa = String(cellVal(c[RD_COL.pointA])||'').trim();
+    var pb = String(cellVal(c[RD_COL.pointB])||'').trim();
+    if(!pa || !pb) return;
+    var pairKey = pa + '|||' + pb;
+
+    if(!byPair[pairKey]){
+      byPair[pairKey] = { pointA: pa, pointB: pb, bracket: '', distanceKm: '', coordA: null, coordB: null, dates: [] };
+    }
+    var entry = byPair[pairKey];
+
+    var br = String(cellVal(c[RD_COL.bracket])||'').trim();
+    if(br && !entry.bracket) entry.bracket = br;
+
+    var dist = String(cellVal(c[RD_COL.distanceKm])||'').trim();
+    if(dist && !entry.distanceKm) entry.distanceKm = dist;
+
+    if(!entry.coordA || !entry.coordB){
+      var ca = parseCoordText(String(cellVal(c[RD_COL.pointACoord])||''));
+      var cb = parseCoordText(String(cellVal(c[RD_COL.pointBCoord])||''));
+      if(ca && cb){ entry.coordA = ca; entry.coordB = cb; }
+    }
+
+    var d = parseDate(cellVal(c[RD_COL.date]));
+    if(d){
+      var iso = isoFromDate(d);
+      entry.dates.push(iso);
+      if(!dateToPairsSet[iso]) dateToPairsSet[iso] = new Set();
+      dateToPairsSet[iso].add(pairKey);
+    }
+  });
+
+  // Turn each date's pair-set into a stable, comparable signature string, then detect periods from those changes.
+  var dateToPairSig = {};
+  Object.keys(dateToPairsSet).forEach(function(iso){
+    dateToPairSig[iso] = Array.from(dateToPairsSet[iso]).sort().join('§');
+  });
+  pointsPeriods = detectContentPeriods(dateToPairSig);
+
+  // Assign each route to the period(s) covering its recorded dates.
+  pointsRoutes = Object.keys(byPair).map(function(k){
+    var entry = byPair[k];
+    var periodIds = new Set();
+    entry.dates.forEach(function(iso){
+      var per = pointsPeriods.find(function(p){ return iso>=p.startISO && iso<=p.endISO; });
+      if(per) periodIds.add(per.id);
+    });
+    entry.periodIds = periodIds;
+    delete entry.dates;
+    return entry;
+  });
+
+  buildPeriodFilterUI();
+  buildBracketFilterUI();
+  initLeafletMap();
+
+  // Fallback geocoding — only for routes that never had valid numeric coordinates anywhere in Raw_data
+  var needGeocode = pointsRoutes.filter(function(p){ return !p.coordA || !p.coordB; });
+  if(needGeocode.length){
+    var addrs = Array.from(new Set(needGeocode.flatMap(function(p){ return [p.pointA, p.pointB]; })));
+    var done = 0;
+    for(var i=0;i<addrs.length;i++){
+      var addr = addrs[i];
+      if(geocodeCache[addr] === undefined){
+        statusEl.textContent = 'Geocoding '+addrs.length+' addresses without coordinates in Raw_data… ('+(done+1)+'/'+addrs.length+')';
+        await geocodeAddress(addr);
+        await sleep(1100); // respect Nominatim's ~1 req/sec usage policy
+      }
+      done++;
+    }
+    needGeocode.forEach(function(p){
+      if(!p.coordA) p.coordA = geocodeCache[p.pointA] || null;
+      if(!p.coordB) p.coordB = geocodeCache[p.pointB] || null;
+    });
+  }
+
+  var drawable = pointsRoutes.filter(function(p){ return p.coordA && p.coordB; }).length;
+  var periodCounts = pointsPeriods.map(function(per){
+    return per.label + ': ' + pointsRoutes.filter(function(p){ return p.periodIds.has(per.id); }).length + ' routes';
+  }).join(' · ');
+  statusEl.textContent = drawable + ' of ' + pointsRoutes.length + ' unique routes have coordinates. ' + periodCounts + '.';
+  renderPointsMap();
+}
+
+function buildPeriodFilterUI(){
+  var list = document.getElementById('pointsPeriodList');
+  list.innerHTML = pointsPeriods.map(function(p){
+    return '<label><input type="checkbox" class="points-period-option" value="'+p.id+'"> '+p.label+'</label>';
+  }).join('');
+  list.querySelectorAll('.points-period-option').forEach(function(chk){
+    chk.onchange = function(){
+      if(chk.checked) pointsSelectedPeriods.add(chk.value); else pointsSelectedPeriods.delete(chk.value);
+      document.getElementById('pointsPeriodAll').checked = pointsSelectedPeriods.size===0;
+      updatePointsFilterLabels();
+      renderPointsMap();
+    };
+  });
+  document.getElementById('pointsPeriodAll').onchange = function(e){
+    if(!e.target.checked){ e.target.checked=true; return; }
+    pointsSelectedPeriods.clear();
+    list.querySelectorAll('input').forEach(function(c){ c.checked=false; });
+    updatePointsFilterLabels();
+    renderPointsMap();
+  };
+  setupPointsDropdown('pointsPeriodBtn','pointsPeriodPanel');
+}
+
+function buildBracketFilterUI(){
+  var list = document.getElementById('pointsBracketList');
+  list.innerHTML = BRACKET_ORDER.map(function(b){
+    return '<label><input type="checkbox" class="points-bracket-option" value="'+b+'"> '+b+'</label>';
+  }).join('');
+  list.querySelectorAll('.points-bracket-option').forEach(function(chk){
+    chk.onchange = function(){
+      if(chk.checked) pointsSelectedBrackets.add(chk.value); else pointsSelectedBrackets.delete(chk.value);
+      document.getElementById('pointsBracketAll').checked = pointsSelectedBrackets.size===0;
+      updatePointsFilterLabels();
+      renderPointsMap();
+    };
+  });
+  document.getElementById('pointsBracketAll').onchange = function(e){
+    if(!e.target.checked){ e.target.checked=true; return; }
+    pointsSelectedBrackets.clear();
+    list.querySelectorAll('input').forEach(function(c){ c.checked=false; });
+    updatePointsFilterLabels();
+    renderPointsMap();
+  };
+  setupPointsDropdown('pointsBracketBtn','pointsBracketPanel');
+}
+
+function setupPointsDropdown(buttonId, panelId){
+  var btn=document.getElementById(buttonId), panel=document.getElementById(panelId);
+  btn.onclick=function(e){
+    e.stopPropagation();
+    var open=panel.style.display==='none';
+    document.querySelectorAll('.points-filter-panel').forEach(function(p){ p.style.display='none'; });
+    document.querySelectorAll('.points-filter-btn').forEach(function(b){ b.classList.remove('open'); });
+    panel.style.display=open?'block':'none';
+    btn.classList.toggle('open',open);
+  };
+}
+
+function updatePointsFilterLabels(){
+  document.getElementById('pointsPeriodLabel').textContent = pointsSelectedPeriods.size===0 ? 'All' :
+    (pointsSelectedPeriods.size===1 ? pointsPeriods.find(function(p){ return p.id===[...pointsSelectedPeriods][0]; }).label : pointsSelectedPeriods.size+' periods selected');
+  document.getElementById('pointsBracketLabel').textContent = pointsSelectedBrackets.size===0 ? 'All' :
+    (pointsSelectedBrackets.size===1 ? [...pointsSelectedBrackets][0] : pointsSelectedBrackets.size+' selected');
+}
+
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.points-filter-dropdown')){
+    document.querySelectorAll('.points-filter-panel').forEach(function(p){ p.style.display='none'; });
+    document.querySelectorAll('.points-filter-btn').forEach(function(b){ b.classList.remove('open'); });
+  }
+});
+
+function initLeafletMap(){
+  if(leafletMap) return;
+  leafletMap = L.map('pointsMap', { zoomControl: true }).setView(CARACAS_CENTER, 12);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+  }).addTo(leafletMap);
+}
+
+function renderPointsMap(){
+  if(!leafletMap) return;
+
+  var matched = pointsRoutes.filter(function(p){
+    var periodOk = pointsSelectedPeriods.size===0 || Array.from(p.periodIds).some(function(id){ return pointsSelectedPeriods.has(id); });
+    var bracketOk = pointsSelectedBrackets.size===0 || pointsSelectedBrackets.has(p.bracket);
+    return periodOk && bracketOk;
+  });
+  // Only points actually drawable (valid coordinates) are shown — on the map AND in the list below.
+  var drawn = matched.filter(function(p){ return p.coordA && p.coordB; });
+
+  leafletLayers.forEach(function(l){ leafletMap.removeLayer(l); });
+  leafletLayers = [];
+
+  var bounds = [];
+  var bracketCounts = {};
+  BRACKET_ORDER.forEach(function(b){ bracketCounts[b]=0; });
+
+  drawn.forEach(function(p){
+    var bracket = BRACKET_ORDER.indexOf(p.bracket)!==-1 ? p.bracket : 'Average';
+    bracketCounts[bracket] = (bracketCounts[bracket]||0) + 1;
+    var color = BRACKET_COLORS[bracket] || '#888';
+    var popupHtml = '<b>'+p.pointA+'</b><br>→ '+p.pointB+'<br><span style="color:'+color+';font-weight:700;">'+bracket+'</span>'+(p.distanceKm?' · '+p.distanceKm+' km':'');
+
+    var line = L.polyline([[p.coordA.lat,p.coordA.lon],[p.coordB.lat,p.coordB.lon]], { color: color, weight: 4, opacity: 0.85, lineCap:'round', lineJoin:'round' }).addTo(leafletMap);
+    line.bindPopup(popupHtml);
+    leafletLayers.push(line);
+
+    [ [p.coordA,p.pointA], [p.coordB,p.pointB] ].forEach(function(pair){
+      var pt=pair[0], label=pair[1];
+      var marker = L.circleMarker([pt.lat,pt.lon], { radius:6, color:'#fff', weight:2, fillColor:color, fillOpacity:1 }).addTo(leafletMap);
+      marker.bindPopup('<b>'+label+'</b><br><span style="color:'+color+';font-weight:700;">'+bracket+'</span>');
+      leafletLayers.push(marker);
+    });
+
+    bounds.push([p.coordA.lat,p.coordA.lon]); bounds.push([p.coordB.lat,p.coordB.lon]);
+  });
+
+  if(bounds.length) leafletMap.fitBounds(bounds, { padding:[30,30] });
+  else leafletMap.setView(CARACAS_CENTER, 12);
+
+  var legendEl = document.getElementById('bracketLegendList');
+  legendEl.innerHTML = BRACKET_ORDER.map(function(b){
+    return '<div class="bl-item"><span class="bl-swatch" style="background:'+BRACKET_COLORS[b]+';"></span>'+b+'<span class="bl-count">'+(bracketCounts[b]||0)+'</span></div>';
+  }).join('');
+
+  var listEl = document.getElementById('pointsListContainer');
+  if(!drawn.length){
+    listEl.innerHTML = '<div class="loading">No points match the selected filter(s).</div>';
+    return;
+  }
+  listEl.innerHTML = drawn.map(function(p){
+    var bracket = BRACKET_ORDER.indexOf(p.bracket)!==-1 ? p.bracket : 'Average';
+    var color = BRACKET_COLORS[bracket] || '#888';
+    var periodsLabel = Array.from(p.periodIds).map(function(id){
+      var per = pointsPeriods.find(function(x){ return x.id===id; });
+      return per ? per.label : id;
+    }).join(' · ');
+    return '<div class="point-row">'
+      + '<span class="pr-bracket" style="background:'+color+';">'+bracket+'</span>'
+      + '<span class="pr-text"><b>'+p.pointA+'</b><br>&rarr; '+p.pointB+'</span>'
+      + '<span class="pr-dist">'+(p.distanceKm?p.distanceKm+' km<br>':'')+periodsLabel+'</span>'
+      + '</div>';
+  }).join('');
+}
+
+/* ── MOTO+ EVALUATION TAB ──
+   Uses raw1Full (unfiltered) restricted to "Our Category" = Moto only.
+   Splits "Ridery" into "Ridery Moto Regular" (Their category = Moto) vs "Ridery Moto Baratica" (Their category = Moto Baratica).
+   Shows every date point directly — no weekly pagination. Has its OWN date filter (From/To), independent
+   from the Main Dashboard filter bar — "From" can never go earlier than MOTO_MIN_DATE. */
+function clampMotoFrom(){
+  var el=document.getElementById('f-d1-moto');
+  if(el.value && el.value<MOTO_MIN_DATE) el.value=MOTO_MIN_DATE;
+  renderMotoTab();
+}
+
+function renderMotoTab(){
+  if(!raw1Full.length) return;
+
+  var motoRowsAll = raw1Full.filter(function(r){
+    return String(r[CAT1]||'').trim().toLowerCase()===MOTO_CATEGORY_NAME.toLowerCase();
+  }).map(function(r){
+    var o={}; for(var k in r) o[k]=r[k];
+    var comp=r[COMP1];
+    if(comp==='Ridery'){
+      var tc=String(r[THEIRCAT1]||'').trim().toLowerCase();
+      o._motoApp = tc.indexOf('baratica')!==-1 ? 'Ridery Moto Baratica' : 'Ridery Moto Regular';
+    } else if(comp==='Yango'){
+      o._motoApp = 'Yango Moto';
+    } else if(comp==='Yummy'){
+      o._motoApp = 'Yummy Moto';
+    } else {
+      o._motoApp = comp;
+    }
+    return o;
+  });
+
+  // Set up this tab's own From/To defaults (From floors at MOTO_MIN_DATE, To defaults to latest Moto date)
+  var d1el=document.getElementById('f-d1-moto'), d2el=document.getElementById('f-d2-moto');
+  if(d1el && !d1el.value) d1el.value=MOTO_MIN_DATE;
+  if(d1el && d1el.value<MOTO_MIN_DATE) d1el.value=MOTO_MIN_DATE;
+  if(d2el && !d2el.value){
+    var motoDatesForDefault=motoRowsAll.map(function(r){return toISO(r[DATE1]);}).filter(Boolean).sort();
+    if(motoDatesForDefault.length) d2el.value=motoDatesForDefault[motoDatesForDefault.length-1];
+  }
+  var fromVal=(d1el&&d1el.value)?d1el.value:MOTO_MIN_DATE;
+  var toVal=d2el?d2el.value:'';
+
+  var motoRows = motoRowsAll.filter(function(r){
+    var iso=toISO(r[DATE1]);
+    if(!iso) return false;
+    if(iso<MOTO_MIN_DATE) return false; // hard floor, regardless of the input value
+    if(fromVal && iso<fromVal) return false;
+    if(toVal && iso>toVal) return false;
+    return true;
+  });
+
+  if(!motoRows.length){
+    document.getElementById('charts-grid-moto').innerHTML='<div class="loading">No "Moto" category data in the selected date range.</div>';
+    document.getElementById('leg-moto').innerHTML='';
+    ['tbl-abs-moto','tbl-diff-moto','tbl-peak-abs-moto','tbl-peak-diff-moto'].forEach(function(id){ document.getElementById(id).innerHTML=''; });
+    return;
+  }
+
+  currentIsoFn = toISO;
+  var apps=getApps(motoRows,'_motoApp','Yango Moto');
+  makeLegend('leg-moto',apps);
+
+  var allBr=Array.from(new Set(motoRows.map(function(r){return r[BR1];}).filter(Boolean)));
+  var activeBr=BRACKETS.filter(function(b){return allBr.includes(b);});
+  var allDates=Array.from(new Set(motoRows.map(function(r){return toISO(r[DATE1]);}).filter(Boolean))).sort();
+
+  makeLineCharts('charts-grid-moto',motoRows,BR1,activeBr,'_motoApp',DATE1,P1,'moto','Yango Moto');
+
+  var absHtml=buildTableAbsHtml(motoRows,allDates,allDates,activeBr,BR1,'_motoApp',DATE1,P1,toISO,'Yango Moto');
+  setTableWithBtn('tbl-abs-moto', absHtml, 'moto_abs_prices', false);
+
+  var diffHtml=buildTableDiffHtml(motoRows,allDates,allDates,activeBr,BR1,'_motoApp',DATE1,P1,toISO,'Yango Moto');
+  setTableWithBtn('tbl-diff-moto', diffHtml, 'moto_diff_pct', false);
+
+  makeTablePeak('tbl-peak-abs-moto','tbl-peak-diff-moto',motoRows,activeBr,BR1,'_motoApp',PEAK1,P1,'Yango Moto');
+
+  motoTabRendered = true;
+}
+
+/* ── MAIN RENDER ── */
+function render(keepPage){
+  if(!keepPage){ tblPage1=0; tblPage2=0; }
+
+  var d1=filterData1();
+  var d2=filterData2();
+  renderCards(d1,d2);
+
+  // SECTION 1 — Price by Distance
+  currentIsoFn=toISO;
+  var apps1=getApps(d1,COMP1);
+  makeLegend('leg1',apps1);
+  var selBracket=document.getElementById('f-bracket').value;
+  var allBr=Array.from(new Set(d1.map(function(r){return r[BR1];}).filter(Boolean)));
+  var activeBr=selBracket?[selBracket]:BRACKETS.filter(function(b){return allBr.includes(b);});
+  var dates1=Array.from(new Set(d1.map(function(r){return toISO(r[DATE1]);}).filter(Boolean))).sort();
+
+  if(!d1.length){ document.getElementById('charts-grid1').innerHTML='<div class="loading">No data for selected filters.</div>'; }
+  else { makeLineCharts('charts-grid1',d1,BR1,activeBr,COMP1,DATE1,P1,'1'); }
+
+  if(dates1.length){
+    // Clamp page in case date range was narrowed
+    var maxP1=getTotalPages(dates1)-1;
+    tblPage1=Math.min(tblPage1,maxP1);
+    var showDates1=getPageDates(dates1,tblPage1);
+    updateNavBar('nav1',dates1,tblPage1,1);
+    makeTableAbs('tbl-abs1',d1,showDates1,dates1,activeBr,BR1,COMP1,DATE1,P1);
+    makeTableDiff('tbl-diff1',d1,showDates1,dates1,activeBr,BR1,COMP1,DATE1,P1);
+    makeTablePeak('tbl-peak-abs1','tbl-peak-diff1',d1,activeBr,BR1,COMP1,PEAK1,P1);
+  } else {
+    document.getElementById('nav1').style.display='none';
+  }
+
+  // SECTION 2 — Minimum Fares
+  currentIsoFn=toISO2;
+  var apps2=getApps(d2,COMP2);
+  makeLegend('leg2',apps2);
+  var cats=Array.from(new Set(d2.map(function(r){return r[CAT2];}).filter(Boolean))).sort();
+  var dates2=Array.from(new Set(d2.map(function(r){return toISO2(r[DATE2]);}).filter(Boolean))).sort();
+
+  if(!d2.length){ document.getElementById('charts-grid2').innerHTML='<div class="loading">No data for selected filters.</div>'; }
+  else { makeLineCharts('charts-grid2',d2,CAT2,cats,COMP2,DATE2,P2,'2'); }
+
+  if(dates2.length){
+    var maxP2=getTotalPages(dates2)-1;
+    tblPage2=Math.min(tblPage2,maxP2);
+    var showDates2=getPageDates(dates2,tblPage2);
+    updateNavBar('nav2',dates2,tblPage2,2);
+    makeTableAbs('tbl-abs2',d2,showDates2,dates2,cats,CAT2,COMP2,DATE2,P2);
+    makeTableDiff('tbl-diff2',d2,showDates2,dates2,cats,CAT2,COMP2,DATE2,P2);
+    makeTablePeak('tbl-peak-abs2','tbl-peak-diff2',d2,cats,CAT2,COMP2,PEAK2,P2);
+  } else {
+    document.getElementById('nav2').style.display='none';
+  }
+}
+
+/* ── SUMMARY CARDS ── */
+function makeCard2(label,accent,html){
+  return '<div style="background:#fff;border:0.5px solid #e0e0e0;border-radius:10px;padding:14px 16px;position:relative;overflow:hidden;">'
+    +'<div style="position:absolute;top:0;left:0;right:0;height:3px;background:'+accent+';"></div>'
+    +'<div style="font-size:11px;color:#888;margin-bottom:8px;margin-top:4px;">'+label+'</div>'+html+'</div>';
+}
+function pill(text,type){
+  var ps=type==='neg'?'background:#e1f5ee;color:#0F6E56;':type==='pos'?'background:#fcebeb;color:#A32D2D;':'background:#f0f0f0;color:#666;';
+  var arrow=type==='neg'?'↓':type==='pos'?'↑':'→';
+  return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;'+ps+'">'+arrow+' '+text+'</span>';
+}
+
+function renderCards(d1,d2){
+  function buildCards(data,compCol,priceCol,isoFn,dateCol,accent,elId){
+    var apps=getApps(data,compCol), compApps=apps.filter(function(a){return a!=='Yango';}), yRows=byApp(data,'Yango',compCol);
+    var yAvg=avg(yRows.map(function(r){return parsePrice(r[priceCol]);}));
+    var cAvg=avg(compApps.reduce(function(acc,a){return acc.concat(byApp(data,a,compCol).map(function(r){return parsePrice(r[priceCol]);}));},[]));
+    var diff=(yAvg!=null&&cAvg!=null&&cAvg!==0)?((yAvg-cAvg)/cAvg)*100:null;
+    var c1val=diff!=null?(diff>=0?'+':'')+diff.toFixed(1)+'%':'-', c1type=diff!=null?(diff<0?'neg':'pos'):'neutral';
+    var card1=makeCard2('vs. competition (avg)',accent,
+      '<div style="font-size:26px;font-weight:500;color:#1a1a1a;line-height:1;margin-bottom:8px;">'+c1val+'</div>'
+      +pill(diff!=null?(diff<0?'Yango cheaper':'Yango more expensive'):'-',c1type)
+      +'<div style="font-size:11px;color:#888;margin-top:8px;">'+(yAvg!=null&&cAvg!=null?'Yango $'+yAvg.toFixed(2)+' · Comp. $'+cAvg.toFixed(2):'')+'</div>');
+
+    var ridRows=byApp(data,'Ridery',compCol), yumRows=byApp(data,'Yummy',compCol);
+    function pctMore(yR,cR){
+      var dates=Array.from(new Set(yR.map(function(r){return isoFn(r[dateCol]);}).filter(Boolean))), tot=0, me=0;
+      dates.forEach(function(d){
+        var yA=avg(yR.filter(function(r){return isoFn(r[dateCol])===d;}).map(function(r){return parsePrice(r[priceCol]);}));
+        var cA=avg(cR.filter(function(r){return isoFn(r[dateCol])===d;}).map(function(r){return parsePrice(r[priceCol]);}));
+        if(yA!=null&&cA!=null){tot++;if(yA>cA)me++;}
+      });
+      return tot>0?Math.round((me/tot)*100):null;
+    }
+    var pR=ridRows.length?pctMore(yRows,ridRows):null, pY=yumRows.length?pctMore(yRows,yumRows):null;
+    var c2html='';
+    if(pR!=null) c2html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><span style="font-size:12px;color:#00BFA5;font-weight:600;">vs Ridery</span><span style="font-size:20px;font-weight:500;color:#1a1a1a;">'+pR+'%</span>'+pill(pR>50?'More exp. '+pR+'% of time':'Cheaper '+(100-pR)+'% of time',pR>50?'pos':'neg')+'</div>';
+    if(pY!=null) c2html+='<div style="display:flex;justify-content:space-between;align-items:center;"><span style="font-size:12px;color:#7B2FBE;font-weight:600;">vs Yummy</span><span style="font-size:20px;font-weight:500;color:#1a1a1a;">'+pY+'%</span>'+pill(pY>50?'More exp. '+pY+'% of time':'Cheaper '+(100-pY)+'% of time',pY>50?'pos':'neg')+'</div>';
+    if(!c2html) c2html='<div style="color:#888;font-size:12px;">No competitor data</div>';
+    var card2=makeCard2('How often is Yango more expensive?',accent,c2html);
+
+    var dates=Array.from(new Set(data.map(function(r){return isoFn(r[dateCol]);}).filter(Boolean))).sort();
+    var c3html='<div style="color:#888;font-size:12px;">Not enough data for trend</div>';
+    if(dates.length>=2){
+      var last=dates[dates.length-1], tgt4w=new Date(new Date(last).getTime()-28*86400000);
+      var prev4w=dates.filter(function(d){return d!==last;}).reduce(function(b,d){return Math.abs(new Date(d)-tgt4w)<Math.abs(new Date(b)-tgt4w)?d:b;},dates[0]);
+      function diffWin(td,ad){
+        var idx=ad.indexOf(td), wd=ad.slice(Math.max(0,idx-2),Math.min(ad.length,idx+3));
+        var yA=avg(yRows.filter(function(r){return wd.indexOf(isoFn(r[dateCol]))!==-1;}).map(function(r){return parsePrice(r[priceCol]);}));
+        var cA=avg(compApps.reduce(function(acc,a){return acc.concat(byApp(data,a,compCol).filter(function(r){return wd.indexOf(isoFn(r[dateCol]))!==-1;}).map(function(r){return parsePrice(r[priceCol]);}));},[]));
+        return (yA!=null&&cA!=null&&cA!==0)?((yA-cA)/cA)*100:null;
+      }
+      var dNow=diffWin(last,dates), dThen=diffWin(prev4w,dates);
+      if(dNow!=null&&dThen!=null){
+        var tChg=dNow-dThen, tType=tChg<0?'neg':'pos';
+        c3html='<div style="display:flex;gap:16px;margin-bottom:8px;"><div><div style="font-size:10px;color:#888;">4 weeks ago</div><div style="font-size:18px;font-weight:500;color:#1a1a1a;">'+(dThen>=0?'+':'')+dThen.toFixed(1)+'%</div></div><div style="font-size:20px;color:#ccc;align-self:center;">→</div><div><div style="font-size:10px;color:#888;">Now</div><div style="font-size:18px;font-weight:500;color:#1a1a1a;">'+(dNow>=0?'+':'')+dNow.toFixed(1)+'%</div></div></div>'+pill(tChg<0?'Getting cheaper vs comp.':'Getting more expensive vs comp.',tType)+'<div style="font-size:11px;color:#888;margin-top:6px;">~'+prev4w.slice(5)+' → ~'+last.slice(5)+'</div>';
+      }
+    }
+    var card3=makeCard2('4-week trend · differential vs competition',accent,c3html);
+    document.getElementById(elId).innerHTML=card1+card2+card3;
+  }
+  buildCards(d1,COMP1,P1,toISO,DATE1,'#E02020','cards-dist');
+  buildCards(d2,COMP2,P2,toISO2,DATE2,'#888780','cards-min');
+}
+
+loadAll();
+</script>
+</body>
+</html>
